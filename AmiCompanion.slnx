@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AmiCompanion.Core/AmiCompanion.Core.csproj" />
+    <Project Path="src/AmiCompanion.Hardware/AmiCompanion.Hardware.csproj" />
+    <Project Path="src/AmiCompanion.Cli/AmiCompanion.Cli.csproj" />
+    <Project Path="src/AmiCompanion.Gui/AmiCompanion.Gui.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AmiCompanion.Core.Tests/AmiCompanion.Core.Tests.csproj" />
+  </Folder>
+</Solution>
