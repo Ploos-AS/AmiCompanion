@@ -23,7 +23,7 @@ public sealed class AmigaDosRecursiveTests
         Write(dir, 6, fileBlock); Fix(dir, 5);
 
         var file = image.AsSpan(fileBlock * 512, 512);
-        Write(file, 0, 2); Write(file, 3, 42); Write(file, 124, 0); Write(file, 127, unchecked((uint)-3));
+        Write(file, 0, 2); Write(file, 3, 1); Write(file, 81, 42); Write(file, 124, 0); Write(file, 127, unchecked((uint)-3));
         file[432] = 3; Encoding.Latin1.GetBytes("foo").CopyTo(file[433..]);
 
         var entries = AmigaDosReader.ListAll(image);
