@@ -50,7 +50,7 @@ jobs:
 
   itch:
     needs: build
-    if: ${{ vars.ITCH_PROJECT != '' && secrets.BUTLER_API_KEY != '' }}
+    if: ${{ vars.ITCH_PROJECT != '' }}
     strategy:
       matrix:
         include:
