@@ -25,7 +25,7 @@ public sealed class AmigaDosDataReaderTests
         Write(data, 0, 8); Write(data, 124, 0);
         var payload = Encoding.ASCII.GetBytes("hello world");
         if (fs == AmigaDosFileSystem.Ofs) Write(data, 4, (uint)payload.Length);
-        payload.CopyTo(data[24..]);
+        payload.CopyTo(fs == AmigaDosFileSystem.Ffs ? data : data[24..]);
 
         var output = Path.Combine(Path.GetTempPath(), "amic-data-" + Guid.NewGuid().ToString("N"));
         try
