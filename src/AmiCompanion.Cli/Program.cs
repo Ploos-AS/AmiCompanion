@@ -18,8 +18,8 @@ try
         "adf" when args.Length == 3 && args[1] == "list" => ListAdf(args[2]),
         "adf" when args.Length == 4 && args[1] == "extract" => ExtractAdf(args[2], args[3]),
         "adf" when args.Length is 4 or 5 && args[1] == "create" => CreateAdf(args),
-        "adf" when args.Length == 5 && args[1] == "put" => PutAdf(args[2], args[3], args[4]),
-        "adf" when args.Length == 4 && args[1] == "mkdir" => MkdirAdf(args[2], args[3]),
+        "adf" when args.Length is 5 or 6 && args[1] == "put" => PutAdf(args[2], args[3], args[4], args.Length == 6 && args[5] == "--backup"),
+        "adf" when args.Length is 4 or 5 && args[1] == "mkdir" => MkdirAdf(args[2], args[3], args.Length == 5 && args[4] == "--backup"),
         "rom" when args.Length == 3 && args[1] == "info" => PrintRom(args[2]),
         "hunk" when args.Length == 3 && args[1] == "info" => PrintHunk(args[2]),
         _ => Unknown(args[0])
@@ -31,7 +31,7 @@ catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or A
 static void PrintHelp()
 {
     Console.WriteLine($"{AppInfo.Name} ({AppInfo.Milestone})\n{AppInfo.Description}\n\nUsage: amic <command> [options]\n");
-    Console.WriteLine("Commands:\n  info                 Show application information\n  version              Show milestone/version information\n  inspect <file>       Auto-detect and inspect a file\n  checksum <file>      Calculate CRC32 and SHA-256\n  adf info <file>      Inspect an ADF image\n  adf list <file>      List the root directory\n  adf extract <file> <output>  Extract an AmigaDOS volume\n  adf create <file> <label> [ofs|ffs]  Create a formatted DD ADF\n  adf put <adf> <source> <path>  Add a file to an ADF\n  adf mkdir <adf> <path>  Create a directory in an ADF\n  rom info <file>      Inspect a Kickstart ROM\n  hunk info <file>     Inspect an Amiga Hunk executable");
+    Console.WriteLine("Commands:\n  info                 Show application information\n  version              Show milestone/version information\n  inspect <file>       Auto-detect and inspect a file\n  checksum <file>      Calculate CRC32 and SHA-256\n  adf info <file>      Inspect an ADF image\n  adf list <file>      List the root directory\n  adf extract <file> <output>  Extract an AmigaDOS volume\n  adf create <file> <label> [ofs|ffs]  Create a formatted DD ADF\n  adf put <adf> <source> <path> [--backup]  Add a file to an ADF\n  adf mkdir <adf> <path> [--backup]  Create a directory in an ADF\n  rom info <file>      Inspect a Kickstart ROM\n  hunk info <file>     Inspect an Amiga Hunk executable");
 }
 static int PrintInfo(){ Console.WriteLine(AppInfo.Description); return 0; }
 static int PrintVersion(){ Console.WriteLine($"{AppInfo.Name} {AppInfo.Milestone}"); return 0; }
@@ -47,7 +47,7 @@ static async Task<int> PrintChecksum(string path)
     var r=await ChecksumService.ComputeFileAsync(path);
     Console.WriteLine($"File    {path}\nCRC32   {r.Crc32:X8}\nSHA256  {r.Sha256}"); return 0;
 }
-static int PutAdf(string adfPath, string sourcePath, string name)
+static int PutAdf(string adfPath, string sourcePath, string name, bool backup)
 {
     var image = File.ReadAllBytes(adfPath);
     var fs = AmigaDosReader.Inspect(image).FileSystem;
@@ -57,11 +57,11 @@ static int PutAdf(string adfPath, string sourcePath, string name)
     var directory = slash < 0 ? string.Empty : normalized[..slash];
     var fileName = slash < 0 ? normalized : normalized[(slash + 1)..];
     AmigaDosFileWriter.AddFile(image, fs, directory, fileName, content);
-    AtomicWrite(adfPath, image);
+    AtomicWrite(adfPath, image, backup);
     Console.WriteLine($"Added      {name}\nADF        {adfPath}\nBytes      {content.Length}");
     return 0;
 }
-static int MkdirAdf(string adfPath, string path)
+static int MkdirAdf(string adfPath, string path, bool backup)
 {
     var image = File.ReadAllBytes(adfPath);
     var fs = AmigaDosReader.Inspect(image).FileSystem;
@@ -75,7 +75,7 @@ static int MkdirAdf(string adfPath, string path)
         if (!exists) AmigaDosFileWriter.CreateDirectory(image, fs, parent, part);
         parent = full;
     }
-    AtomicWrite(adfPath, image);
+    AtomicWrite(adfPath, image, backup);
     Console.WriteLine($"Created    {path}\nADF        {adfPath}");
     return 0;
 }
@@ -113,11 +113,12 @@ static int CreateAdf(string[] commandArgs)
     Console.WriteLine($"Created    {path}\nFilesystem {fs}\nLabel      {label}\nSize       {AdfInspector.StandardSize}");
     return 0;
 }
-static void AtomicWrite(string path, byte[] data)
+static void AtomicWrite(string path, byte[] data, bool backup = false)
 {
     var fullPath = Path.GetFullPath(path);
     var directory = Path.GetDirectoryName(fullPath) ?? Directory.GetCurrentDirectory();
     var temp = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+    var backupPath = fullPath + ".bak";
     try
     {
         using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
@@ -125,6 +126,7 @@ static void AtomicWrite(string path, byte[] data)
             stream.Write(data);
             stream.Flush(flushToDisk: true);
         }
+        if (backup && File.Exists(fullPath)) File.Copy(fullPath, backupPath, overwrite: true);
         File.Move(temp, fullPath, overwrite: true);
     }
     finally
