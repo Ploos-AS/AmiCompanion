@@ -52,6 +52,23 @@ jobs:
           else
             find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > SHA256SUMS
           fi
+      - name: Create native archive
+        shell: bash
+        run: |
+          mkdir -p dist/packages
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "${{ matrix.rid }}" == win-* ]]; then
+            powershell -NoProfile -Command "Compress-Archive -Path 'dist/AmiCompanion/*' -DestinationPath 'dist/packages/AmiCompanion-$VERSION-${{ matrix.rid }}.zip'"
+          elif [[ "${{ matrix.rid }}" == linux-* ]]; then
+            tar -C dist -czf "dist/packages/AmiCompanion-$VERSION-${{ matrix.rid }}.tar.gz" AmiCompanion
+          fi
+      - name: Upload native archive
+        if: ${{ startsWith(matrix.rid, 'win-') || startsWith(matrix.rid, 'linux-') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: AmiCompanion-package-${{ matrix.rid }}
+          path: dist/packages/*
+          if-no-files-found: error
       - name: Upload package input
         uses: actions/upload-artifact@v4
         with:
