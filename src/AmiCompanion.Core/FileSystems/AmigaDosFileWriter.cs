@@ -63,7 +63,7 @@ public static class AmigaDosFileWriter
         WriteU32(header, 2, (uint)dataBlocks.Length);
         WriteU32(header, 3, 0);
         WriteU32(header, 4, dataBlocks.Length == 0 ? 0u : (uint)dataBlocks[0]);
-        WriteU32(header, 3, (uint)content.Length);
+        WriteU32(header, 3, 0); WriteU32(header, 81, (uint)content.Length);
         WriteU32(header, 124, 0);
         WriteU32(header, 125, (uint)volume.RootBlock);
         WriteU32(header, 126, 0);
