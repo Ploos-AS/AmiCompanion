@@ -1,4 +1,5 @@
 using AmiCompanion.Core;
+using Xunit;
 
 namespace AmiCompanion.Core.Tests;
 
