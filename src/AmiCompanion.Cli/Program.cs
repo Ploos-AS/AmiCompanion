@@ -16,6 +16,7 @@ try
         "checksum" when args.Length == 2 => await PrintChecksum(args[1]),
         "adf" when args.Length == 3 && args[1] == "info" => PrintAdf(args[2]),
         "adf" when args.Length == 3 && args[1] == "list" => ListAdf(args[2]),
+        "adf" when args.Length == 4 && args[1] == "extract" => ExtractAdf(args[2], args[3]),
         "adf" when args.Length is 4 or 5 && args[1] == "create" => CreateAdf(args),
         "rom" when args.Length == 3 && args[1] == "info" => PrintRom(args[2]),
         "hunk" when args.Length == 3 && args[1] == "info" => PrintHunk(args[2]),
@@ -28,7 +29,7 @@ catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or A
 static void PrintHelp()
 {
     Console.WriteLine($"{AppInfo.Name} ({AppInfo.Milestone})\n{AppInfo.Description}\n\nUsage: amic <command> [options]\n");
-    Console.WriteLine("Commands:\n  info                 Show application information\n  version              Show milestone/version information\n  inspect <file>       Auto-detect and inspect a file\n  checksum <file>      Calculate CRC32 and SHA-256\n  adf info <file>      Inspect an ADF image\n  adf list <file>      List the root directory\n  adf create <file> <label> [ofs|ffs]  Create a formatted DD ADF\n  rom info <file>      Inspect a Kickstart ROM\n  hunk info <file>     Inspect an Amiga Hunk executable");
+    Console.WriteLine("Commands:\n  info                 Show application information\n  version              Show milestone/version information\n  inspect <file>       Auto-detect and inspect a file\n  checksum <file>      Calculate CRC32 and SHA-256\n  adf info <file>      Inspect an ADF image\n  adf list <file>      List the root directory\n  adf extract <file> <output>  Extract an AmigaDOS volume\n  adf create <file> <label> [ofs|ffs]  Create a formatted DD ADF\n  rom info <file>      Inspect a Kickstart ROM\n  hunk info <file>     Inspect an Amiga Hunk executable");
 }
 static int PrintInfo(){ Console.WriteLine(AppInfo.Description); return 0; }
 static int PrintVersion(){ Console.WriteLine($"{AppInfo.Name} {AppInfo.Milestone}"); return 0; }
@@ -43,6 +44,13 @@ static async Task<int> PrintChecksum(string path)
 {
     var r=await ChecksumService.ComputeFileAsync(path);
     Console.WriteLine($"File    {path}\nCRC32   {r.Crc32:X8}\nSHA256  {r.Sha256}"); return 0;
+}
+static int ExtractAdf(string path, string output)
+{
+    var data = File.ReadAllBytes(path);
+    AmigaDosExtractor.Extract(data, output);
+    Console.WriteLine($"Extracted  {path}\nOutput     {Path.GetFullPath(output)}");
+    return 0;
 }
 static int ListAdf(string path)
 {
