@@ -23,6 +23,8 @@ public static class AmigaDosFileWriter
 
         var used = new HashSet<int>(AmigaDosReader.ListAll(image).Select(x => x.Entry.HeaderBlock));
         used.Add(volume.RootBlock); used.Add(volume.BitmapBlock);
+        foreach (var item in AmigaDosReader.ListAll(image))
+            used.Add(item.Entry.HeaderBlock);
         var blocks = new List<int>();
         var blockCount = image.Length / BlockSize;
         var needed = Math.Max(1, (content.Length + DataBytesPerBlock - 1) / DataBytesPerBlock);
@@ -33,9 +35,27 @@ public static class AmigaDosFileWriter
         var headerBlock = blocks[0];
         var dataBlocks = blocks.Skip(1).ToArray();
         var root = image.AsSpan(volume.RootBlock * BlockSize, BlockSize);
-        var slot = Enumerable.Range(6, 72).FirstOrDefault(i => ReadU32(root, i) == 0, -1);
-        if (slot < 0) throw new IOException("Root directory hash table is full.");
-        WriteU32(root, slot, (uint)headerBlock);
+        var slot = 6 + AmigaDosHash.GetBucket(name);
+        var existing = checked((int)ReadU32(root, slot));
+        if (existing == 0)
+            WriteU32(root, slot, (uint)headerBlock);
+        else
+        {
+            var current = existing;
+            while (true)
+            {
+                var currentBlock = image.AsSpan(current * BlockSize, BlockSize);
+                var next = checked((int)ReadU32(currentBlock, 124));
+                if (next == 0)
+                {
+                    WriteU32(currentBlock, 124, (uint)headerBlock);
+                    FixChecksum(currentBlock, 5);
+                    break;
+                }
+                current = next;
+            }
+        }
+        MarkAllocated(image, volume.BitmapBlock, blocks);
 
         var header = image.AsSpan(headerBlock * BlockSize, BlockSize);
         WriteU32(header, 0, 2);
@@ -56,6 +76,20 @@ public static class AmigaDosFileWriter
             FixChecksum(block, 5);
         }
         FixChecksum(root, 5);
+    }
+
+    private static void MarkAllocated(byte[] image, int bitmapBlock, IEnumerable<int> blocks)
+    {
+        var bitmap = image.AsSpan(bitmapBlock * BlockSize, BlockSize);
+        foreach (var blockNumber in blocks)
+        {
+            var bit = blockNumber - 2;
+            var word = 1 + bit / 32;
+            var bitInWord = bit % 32;
+            var value = ReadU32(bitmap, word);
+            WriteU32(bitmap, word, value & ~(1u << bitInWord));
+        }
+        FixChecksum(bitmap, 0);
     }
 
     private static uint ReadU32(ReadOnlySpan<byte> b, int n) => BinaryPrimitives.ReadUInt32BigEndian(b.Slice(n * 4, 4));
