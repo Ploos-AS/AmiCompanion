@@ -61,7 +61,7 @@ public static class AmigaDosReader
                 var nameLength = Math.Min(header[432], (byte)30);
                 var name = Encoding.Latin1.GetString(header.Slice(433, nameLength));
                 var secondaryType = unchecked((int)ReadU32(header, 127));
-                var byteSize = ReadU32(header, 47);
+                var byteSize = ReadU32(header, 3);
                 var nextHash = checked((int)ReadU32(header, 124));
                 var entry = new AmigaDosDirectoryEntry(name, blockNumber, secondaryType, byteSize, nextHash);
                 var path = string.IsNullOrEmpty(prefix) ? name : $"{prefix}/{name}";
