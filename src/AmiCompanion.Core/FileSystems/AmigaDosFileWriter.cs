@@ -76,7 +76,8 @@ public static class AmigaDosFileWriter
         for (var i = 0; i < dataBlocks.Length; i++)
         {
             var block = image.AsSpan(dataBlocks[i] * BlockSize, BlockSize);
-            var count = Math.Min(DataBytesPerBlock, content.Length - i * DataBytesPerBlock);
+            var bytesPerBlock = fileSystem == AmigaDosFileSystem.Ffs ? BlockSize : DataBytesPerBlock;
+            var count = Math.Min(bytesPerBlock, content.Length - i * bytesPerBlock);
             if (fileSystem == AmigaDosFileSystem.Ofs)
             {
                 WriteU32(block, 0, 8);
@@ -84,12 +85,12 @@ public static class AmigaDosFileWriter
                 WriteU32(block, 2, (uint)(i + 1));
                 WriteU32(block, 3, (uint)count);
                 WriteU32(block, 4, i + 1 < dataBlocks.Length ? (uint)dataBlocks[i + 1] : 0);
-                content.Slice(i * DataBytesPerBlock, count).CopyTo(block[DataOffset..]);
+                content.Slice(i * bytesPerBlock, count).CopyTo(block[DataOffset..]);
                 FixChecksum(block, 5);
             }
             else
             {
-                content.Slice(i * DataBytesPerBlock, count).CopyTo(block);
+                content.Slice(i * bytesPerBlock, count).CopyTo(block);
             }
         }
         FixChecksum(root, 5);
