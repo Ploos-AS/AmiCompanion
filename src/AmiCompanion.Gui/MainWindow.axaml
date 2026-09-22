@@ -2,22 +2,34 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="AmiCompanion.Gui.MainWindow"
         Title="AmiCompanion"
-        Width="900" Height="600"
-        MinWidth="640" MinHeight="420">
-  <Grid RowDefinitions="Auto,*" Margin="24">
+        Width="960" Height="680"
+        MinWidth="720" MinHeight="500">
+  <Grid RowDefinitions="Auto,Auto,*" Margin="24">
     <StackPanel Spacing="6">
       <TextBlock Text="AmiCompanion" FontSize="30" FontWeight="Bold" />
-      <TextBlock Text="Cross-platform Amiga companion toolkit — M0" FontSize="16" />
+      <TextBlock Text="Cross-platform Amiga companion toolkit — M1 Inspect" FontSize="16" />
     </StackPanel>
-    <Grid Grid.Row="1" Margin="0,28,0,0" ColumnDefinitions="*,*">
-      <StackPanel Spacing="10">
-        <TextBlock Text="Inspect" FontSize="20" FontWeight="SemiBold" />
-        <TextBlock Text="ADF/HDF, ROM and Hunk tools arrive in M1." TextWrapping="Wrap" />
+
+    <Grid Grid.Row="1" Margin="0,24,0,0" ColumnDefinitions="*,Auto">
+      <TextBox x:Name="FilePathBox" Watermark="Select an ADF, Kickstart ROM or Amiga Hunk file…" />
+      <Button Grid.Column="1" Margin="10,0,0,0" Padding="18,8" Content="Open…" Click="OpenFile_Click" />
+    </Grid>
+
+    <Grid Grid.Row="2" Margin="0,18,0,0" ColumnDefinitions="220,*">
+      <StackPanel Spacing="8">
+        <TextBlock Text="Inspect as" FontSize="18" FontWeight="SemiBold" />
+        <Button Content="Checksums" HorizontalAlignment="Stretch" Click="Checksum_Click" />
+        <Button Content="ADF image" HorizontalAlignment="Stretch" Click="Adf_Click" />
+        <Button Content="Kickstart ROM" HorizontalAlignment="Stretch" Click="Rom_Click" />
+        <Button Content="Amiga Hunk" HorizontalAlignment="Stretch" Click="Hunk_Click" />
       </StackPanel>
-      <StackPanel Grid.Column="1" Spacing="10">
-        <TextBlock Text="Hardware" FontSize="20" FontWeight="SemiBold" />
-        <TextBlock Text="Gotek, Greaseweazle, CF/SD and transfer support follow in later milestones." TextWrapping="Wrap" />
-      </StackPanel>
+
+      <Border Grid.Column="1" Margin="24,0,0,0" Padding="18" BorderThickness="1" CornerRadius="6">
+        <ScrollViewer>
+          <TextBlock x:Name="ResultText" Text="Choose a file, then select an inspector." FontFamily="Monospace"
+                     TextWrapping="Wrap" />
+        </ScrollViewer>
+      </Border>
     </Grid>
   </Grid>
 </Window>
