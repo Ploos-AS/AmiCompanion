@@ -11,7 +11,7 @@ internal static class AmigaDosDataReader
     public static byte[] ReadFile(ReadOnlySpan<byte> image, AmigaDosFileSystem fileSystem, int headerBlock)
     {
         var header = image.Slice(headerBlock * BlockSize, BlockSize);
-        var size = checked((int)BinaryPrimitives.ReadUInt32BigEndian(header.Slice(81 * 4, 4)));
+        var size = checked((int)BinaryPrimitives.ReadUInt32BigEndian(header.Slice(3 * 4, 4)));
         if (size == 0) return Array.Empty<byte>();
 
         return fileSystem switch
