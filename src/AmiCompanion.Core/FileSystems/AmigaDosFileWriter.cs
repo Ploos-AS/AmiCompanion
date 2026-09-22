@@ -33,15 +33,12 @@ public static class AmigaDosFileWriter
         if (AmigaDosReader.ListAll(image).Any(x => string.Equals(x.Path, fullPath, StringComparison.OrdinalIgnoreCase)))
             throw new IOException($"File already exists: {fullPath}");
 
-        var used = new HashSet<int>(AmigaDosReader.ListAll(image).Select(x => x.Entry.HeaderBlock));
-        used.Add(volume.RootBlock); used.Add(volume.BitmapBlock);
-        foreach (var item in AmigaDosReader.ListAll(image))
-            used.Add(item.Entry.HeaderBlock);
         var blocks = new List<int>();
         var blockCount = image.Length / BlockSize;
         var needed = content.Length == 0 ? 0 : (content.Length + (fileSystem == AmigaDosFileSystem.Ffs ? BlockSize : DataBytesPerBlock) - 1) / (fileSystem == AmigaDosFileSystem.Ffs ? BlockSize : DataBytesPerBlock);
+        var bitmap = image.AsSpan(volume.BitmapBlock * BlockSize, BlockSize);
         for (var b = 2; b < blockCount && blocks.Count < needed + 1; b++)
-            if (!used.Contains(b)) blocks.Add(b);
+            if (IsFree(bitmap, b)) blocks.Add(b);
         if (blocks.Count != needed + 1) throw new IOException("Not enough free AmigaDOS blocks.");
 
         var headerBlock = blocks[0];
@@ -106,6 +103,14 @@ public static class AmigaDosFileWriter
             }
         }
         FixChecksum(parentHeader, 5);
+    }
+
+    private static bool IsFree(ReadOnlySpan<byte> bitmap, int blockNumber)
+    {
+        var bit = blockNumber - 2;
+        var word = 1 + bit / 32;
+        var bitInWord = bit % 32;
+        return (ReadU32(bitmap, word) & (1u << bitInWord)) != 0;
     }
 
     private static void MarkAllocated(byte[] image, int bitmapBlock, IEnumerable<int> blocks)
