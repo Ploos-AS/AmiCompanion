@@ -57,7 +57,7 @@ static int PutAdf(string adfPath, string sourcePath, string name, bool backup)
     var directory = slash < 0 ? string.Empty : normalized[..slash];
     var fileName = slash < 0 ? normalized : normalized[(slash + 1)..];
     AmigaDosFileWriter.AddFile(image, fs, directory, fileName, content);
-    AtomicWrite(adfPath, image, backup);
+    AtomicImageWriter.Write(adfPath, image, backup);
     Console.WriteLine($"Added      {name}\nADF        {adfPath}\nBytes      {content.Length}");
     return 0;
 }
@@ -75,7 +75,7 @@ static int MkdirAdf(string adfPath, string path, bool backup)
         if (!exists) AmigaDosFileWriter.CreateDirectory(image, fs, parent, part);
         parent = full;
     }
-    AtomicWrite(adfPath, image, backup);
+    AtomicImageWriter.Write(adfPath, image, backup);
     Console.WriteLine($"Created    {path}\nADF        {adfPath}");
     return 0;
 }
@@ -112,27 +112,6 @@ static int CreateAdf(string[] commandArgs)
     File.WriteAllBytes(path, AmigaDosFormatter.FormatAdf(label, fs));
     Console.WriteLine($"Created    {path}\nFilesystem {fs}\nLabel      {label}\nSize       {AdfInspector.StandardSize}");
     return 0;
-}
-static void AtomicWrite(string path, byte[] data, bool backup = false)
-{
-    var fullPath = Path.GetFullPath(path);
-    var directory = Path.GetDirectoryName(fullPath) ?? Directory.GetCurrentDirectory();
-    var temp = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
-    var backupPath = fullPath + ".bak";
-    try
-    {
-        using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-        {
-            stream.Write(data);
-            stream.Flush(flushToDisk: true);
-        }
-        if (backup && File.Exists(fullPath)) File.Copy(fullPath, backupPath, overwrite: true);
-        File.Move(temp, fullPath, overwrite: true);
-    }
-    finally
-    {
-        if (File.Exists(temp)) File.Delete(temp);
-    }
 }
 static int PrintAdf(string path)
 {
