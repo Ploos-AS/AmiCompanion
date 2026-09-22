@@ -9,7 +9,10 @@ public static class AmigaDosFileWriter
     private const int DataOffset = 24;
     private const int DataBytesPerBlock = 488;
 
-    public static void AddFile(byte[] image, AmigaDosFileSystem fileSystem, string name, ReadOnlySpan<byte> content)
+    public static void AddFile(byte[] image, AmigaDosFileSystem fileSystem, string name, ReadOnlySpan<byte> content) =>
+        AddFile(image, fileSystem, string.Empty, name, content);
+
+    public static void AddFile(byte[] image, AmigaDosFileSystem fileSystem, string directoryPath, string name, ReadOnlySpan<byte> content)
     {
         ArgumentNullException.ThrowIfNull(image);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -18,8 +21,17 @@ public static class AmigaDosFileWriter
 
         var volume = AmigaDosReader.Inspect(image);
         if (volume.FileSystem != fileSystem) throw new InvalidDataException("Filesystem type does not match the image.");
-        if (AmigaDosReader.ListAll(image).Any(x => string.Equals(x.Path, name, StringComparison.OrdinalIgnoreCase)))
-            throw new IOException($"File already exists: {name}");
+        var parentBlock = volume.RootBlock;
+        var normalizedDirectory = directoryPath.Trim('/');
+        if (normalizedDirectory.Length != 0)
+        {
+            var parent = AmigaDosReader.ListAll(image).SingleOrDefault(x => x.Entry.IsDirectory && string.Equals(x.Path, normalizedDirectory, StringComparison.OrdinalIgnoreCase));
+            if (parent is null) throw new DirectoryNotFoundException(directoryPath);
+            parentBlock = parent.Entry.HeaderBlock;
+        }
+        var fullPath = normalizedDirectory.Length == 0 ? name : normalizedDirectory + "/" + name;
+        if (AmigaDosReader.ListAll(image).Any(x => string.Equals(x.Path, fullPath, StringComparison.OrdinalIgnoreCase)))
+            throw new IOException($"File already exists: {fullPath}");
 
         var used = new HashSet<int>(AmigaDosReader.ListAll(image).Select(x => x.Entry.HeaderBlock));
         used.Add(volume.RootBlock); used.Add(volume.BitmapBlock);
@@ -34,11 +46,11 @@ public static class AmigaDosFileWriter
 
         var headerBlock = blocks[0];
         var dataBlocks = blocks.Skip(1).ToArray();
-        var root = image.AsSpan(volume.RootBlock * BlockSize, BlockSize);
+        var parent = image.AsSpan(parentBlock * BlockSize, BlockSize);
         var slot = 6 + AmigaDosHash.GetBucket(name);
-        var existing = checked((int)ReadU32(root, slot));
+        var existing = checked((int)ReadU32(parent, slot));
         if (existing == 0)
-            WriteU32(root, slot, (uint)headerBlock);
+            WriteU32(parent, slot, (uint)headerBlock);
         else
         {
             var current = existing;
@@ -65,7 +77,7 @@ public static class AmigaDosFileWriter
         WriteU32(header, 4, dataBlocks.Length == 0 ? 0u : (uint)dataBlocks[0]);
         WriteU32(header, 3, 0); WriteU32(header, 81, (uint)content.Length);
         WriteU32(header, 124, 0);
-        WriteU32(header, 125, (uint)volume.RootBlock);
+        WriteU32(header, 125, (uint)parentBlock);
         WriteU32(header, 126, 0);
         WriteU32(header, 127, unchecked((uint)-3));
         for (var i = 0; i < dataBlocks.Length; i++)
@@ -93,7 +105,7 @@ public static class AmigaDosFileWriter
                 content.Slice(i * bytesPerBlock, count).CopyTo(block);
             }
         }
-        FixChecksum(root, 5);
+        FixChecksum(parent, 5);
     }
 
     private static void MarkAllocated(byte[] image, int bitmapBlock, IEnumerable<int> blocks)
