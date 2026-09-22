@@ -25,9 +25,9 @@ public static class AmigaDosFileWriter
         var normalizedDirectory = directoryPath.Trim('/');
         if (normalizedDirectory.Length != 0)
         {
-            var parent = AmigaDosReader.ListAll(image).SingleOrDefault(x => x.Entry.IsDirectory && string.Equals(x.Path, normalizedDirectory, StringComparison.OrdinalIgnoreCase));
-            if (parent is null) throw new DirectoryNotFoundException(directoryPath);
-            parentBlock = parent.Entry.HeaderBlock;
+            var matches = AmigaDosReader.ListAll(image).Where(x => x.Entry.IsDirectory && string.Equals(x.Path, normalizedDirectory, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (matches.Length == 0) throw new DirectoryNotFoundException(directoryPath);
+            parentBlock = matches[0].Entry.HeaderBlock;
         }
         var fullPath = normalizedDirectory.Length == 0 ? name : normalizedDirectory + "/" + name;
         if (AmigaDosReader.ListAll(image).Any(x => string.Equals(x.Path, fullPath, StringComparison.OrdinalIgnoreCase)))
@@ -46,11 +46,11 @@ public static class AmigaDosFileWriter
 
         var headerBlock = blocks[0];
         var dataBlocks = blocks.Skip(1).ToArray();
-        var parent = image.AsSpan(parentBlock * BlockSize, BlockSize);
+        var parentHeader = image.AsSpan(parentBlock * BlockSize, BlockSize);
         var slot = 6 + AmigaDosHash.GetBucket(name);
-        var existing = checked((int)ReadU32(parent, slot));
+        var existing = checked((int)ReadU32(parentHeader, slot));
         if (existing == 0)
-            WriteU32(parent, slot, (uint)headerBlock);
+            WriteU32(parentHeader, slot, (uint)headerBlock);
         else
         {
             var current = existing;
@@ -105,7 +105,7 @@ public static class AmigaDosFileWriter
                 content.Slice(i * bytesPerBlock, count).CopyTo(block);
             }
         }
-        FixChecksum(parent, 5);
+        FixChecksum(parentHeader, 5);
     }
 
     private static void MarkAllocated(byte[] image, int bitmapBlock, IEnumerable<int> blocks)
