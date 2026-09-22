@@ -43,6 +43,39 @@ public sealed class AmigaDosWriterAllocationTests
         Assert.Contains(entries, x => x.Path == "file_24");
     }
 
+    [Fact]
+    public void WriterSkipsBlockMarkedAllocatedInBitmap()
+    {
+        var image = AmigaDosFormatter.FormatAdf("ALLOC", AmigaDosFileSystem.Ffs);
+        var bitmap = image.AsSpan(881 * 512, 512);
+        const int reservedBlock = 2;
+        var bit = reservedBlock - 2;
+        var word = 1 + bit / 32;
+        var mask = 1u << (bit % 32);
+        var value = BinaryPrimitives.ReadUInt32BigEndian(bitmap.Slice(word * 4, 4));
+        BinaryPrimitives.WriteUInt32BigEndian(bitmap.Slice(word * 4, 4), value & ~mask);
+        FixBitmapChecksum(bitmap);
+
+        AmigaDosFileWriter.AddFile(image, AmigaDosFileSystem.Ffs, "safe", new byte[10]);
+
+        var entry = Assert.Single(AmigaDosReader.ListAll(image));
+        Assert.NotEqual(reservedBlock, entry.Entry.HeaderBlock);
+        Assert.NotEqual(reservedBlock, ReadDataBlock(image, entry.Entry.HeaderBlock));
+    }
+
+    private static int ReadDataBlock(byte[] image, int headerBlock)
+    {
+        var header = image.AsSpan(headerBlock * 512, 512);
+        return checked((int)BinaryPrimitives.ReadUInt32BigEndian(header.Slice(77 * 4, 4)));
+    }
+
+    private static void FixBitmapChecksum(Span<byte> bitmap)
+    {
+        BinaryPrimitives.WriteUInt32BigEndian(bitmap[..4], 0);
+        var sum = Sum(bitmap);
+        BinaryPrimitives.WriteUInt32BigEndian(bitmap[..4], unchecked(0u - sum));
+    }
+
     private static uint Sum(ReadOnlySpan<byte> block)
     {
         uint sum = 0;
