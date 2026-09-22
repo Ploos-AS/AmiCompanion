@@ -22,7 +22,7 @@ public sealed class AmigaDosEndToEndTests
         Write(root, 6, headerBlock); Fix(root, 5);
 
         var header = image.AsSpan(headerBlock * 512, 512);
-        Write(header, 0, 2); Write(header, 81, (uint)payload.Length); Write(header, 125, dataBlock);
+        Write(header, 0, 2); Write(header, 3, (uint)payload.Length); Write(header, 125, dataBlock);
         Write(header, 127, unchecked((uint)-3)); header[432] = (byte)name.Length;
         Encoding.Latin1.GetBytes(name).CopyTo(header[433..]); Fix(header, 5);
 
