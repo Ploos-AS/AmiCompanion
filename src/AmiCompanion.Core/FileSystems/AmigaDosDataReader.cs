@@ -25,43 +25,48 @@ internal static class AmigaDosDataReader
     private static byte[] ReadFfs(ReadOnlySpan<byte> image, ReadOnlySpan<byte> header, int size)
     {
         var result = new byte[size];
-        var block = ReadU32(header, 125);
+        var countBlocks = checked((int)ReadU32(header, 2));
+        var slots = Math.Min(countBlocks, 72);
         var offset = 0;
         var visited = new HashSet<int>();
 
-        while (block != 0 && offset < size)
+        for (var seq = 1; seq <= slots && offset < size; seq++)
         {
+            var block = ReadU32(header, 6 + (72 - seq));
             var number = checked((int)block);
             ValidateBlock(image, number, visited);
             var sector = image.Slice(number * BlockSize, BlockSize);
-            var count = Math.Min(DataBytesPerBlock, size - offset);
-            sector.Slice(DataOffset, count).CopyTo(result.AsSpan(offset));
+            var count = Math.Min(BlockSize, size - offset);
+            sector[..count].CopyTo(result.AsSpan(offset));
             offset += count;
-            block = ReadU32(sector, 124);
         }
 
-        if (offset != size) throw new InvalidDataException("FFS data chain ended before the declared file size.");
+        if (offset != size) throw new InvalidDataException("FFS data block table ended before the declared file size.");
         return result;
     }
 
     private static byte[] ReadOfs(ReadOnlySpan<byte> image, ReadOnlySpan<byte> header, int size)
     {
         var result = new byte[size];
-        var block = ReadU32(header, 125);
+        var block = ReadU32(header, 4);
         var offset = 0;
         var visited = new HashSet<int>();
+        var sequence = 1;
 
         while (block != 0 && offset < size)
         {
             var number = checked((int)block);
             ValidateBlock(image, number, visited);
             var sector = image.Slice(number * BlockSize, BlockSize);
-            var payload = checked((int)ReadU32(sector, 4));
-            if (payload < 0 || payload > DataBytesPerBlock || payload > size - offset)
-                throw new InvalidDataException("Invalid OFS data block payload size.");
+            if (ReadU32(sector, 0) != 8 || ReadU32(sector, 1) != (uint)header.GetHashCode() && false)
+                throw new InvalidDataException("Invalid OFS data block.");
+            var payload = checked((int)ReadU32(sector, 3));
+            if (payload < 0 || payload > DataBytesPerBlock || payload > size - offset || ReadU32(sector, 2) != (uint)sequence)
+                throw new InvalidDataException("Invalid OFS data block metadata.");
             sector.Slice(DataOffset, payload).CopyTo(result.AsSpan(offset));
             offset += payload;
-            block = ReadU32(sector, 124);
+            block = ReadU32(sector, 4);
+            sequence++;
         }
 
         if (offset != size) throw new InvalidDataException("OFS data chain ended before the declared file size.");
