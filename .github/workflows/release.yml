@@ -52,6 +52,20 @@ jobs:
           else
             find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > SHA256SUMS
           fi
+      - name: Create macOS app bundle
+        if: ${{ startsWith(matrix.rid, 'osx-') }}
+        shell: bash
+        run: |
+          chmod +x packaging/macos/package.sh
+          packaging/macos/package.sh dist/AmiCompanion dist/macos "${GITHUB_REF_NAME#v}"
+          ditto -c -k --sequesterRsrc --keepParent dist/macos/AmiCompanion.app "dist/AmiCompanion-${GITHUB_REF_NAME#v}-${{ matrix.rid }}.zip"
+      - name: Upload macOS app
+        if: ${{ startsWith(matrix.rid, 'osx-') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: AmiCompanion-package-${{ matrix.rid }}
+          path: dist/AmiCompanion-*.zip
+          if-no-files-found: error
       - name: Create native archive
         shell: bash
         run: |
