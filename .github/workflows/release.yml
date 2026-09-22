@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            channel: windows-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+            channel: linux-x64
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
+            channel: linux-arm64
+          - os: macos-15-intel
+            rid: osx-x64
+            channel: macos-x64
+          - os: macos-14
+            rid: osx-arm64
+            channel: macos-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+      - name: Test
+        run: dotnet test --configuration Release
+      - name: Publish GUI
+        run: dotnet publish src/AmiCompanion.Gui/AmiCompanion.Gui.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output dist/AmiCompanion
+      - name: Publish CLI
+        run: dotnet publish src/AmiCompanion.Cli/AmiCompanion.Cli.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output dist/AmiCompanion
+      - name: Upload package input
+        uses: actions/upload-artifact@v4
+        with:
+          name: AmiCompanion-${{ matrix.rid }}
+          path: dist/AmiCompanion
+          if-no-files-found: error
+
+  itch:
+    needs: build
+    if: ${{ vars.ITCH_PROJECT != '' && secrets.BUTLER_API_KEY != '' }}
+    strategy:
+      matrix:
+        include:
+          - artifact: AmiCompanion-win-x64
+            channel: windows-x64
+          - artifact: AmiCompanion-linux-x64
+            channel: linux-x64
+          - artifact: AmiCompanion-linux-arm64
+            channel: linux-arm64
+          - artifact: AmiCompanion-osx-x64
+            channel: macos-x64
+          - artifact: AmiCompanion-osx-arm64
+            channel: macos-arm64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: package
+      - name: Install butler
+        run: |
+          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip butler.zip
+          chmod +x butler
+      - name: Validate package
+        run: ./butler validate package
+      - name: Publish to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: ./butler push package "${{ vars.ITCH_PROJECT }}:${{ matrix.channel }}" --userversion "${GITHUB_REF_NAME#v}"
