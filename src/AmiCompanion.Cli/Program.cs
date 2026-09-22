@@ -49,8 +49,11 @@ static int ListAdf(string path)
     var data = File.ReadAllBytes(path);
     var volume = AmigaDosReader.Inspect(data);
     Console.WriteLine($"Volume     {volume.Name}\nFilesystem {volume.FileSystem}");
-    foreach (var entry in AmigaDosReader.ListRoot(data))
-        Console.WriteLine($"{(entry.IsDirectory ? "DIR " : entry.IsFile ? "FILE" : "????")} {entry.ByteSize,10} {entry.Name}");
+    foreach (var item in AmigaDosReader.ListAll(data))
+    {
+        var entry = item.Entry;
+        Console.WriteLine($"{(entry.IsDirectory ? "DIR " : entry.IsFile ? "FILE" : "????")} {entry.ByteSize,10} {item.Path}");
+    }
     return 0;
 }
 static int CreateAdf(string[] commandArgs)
