@@ -28,8 +28,8 @@
 
 ## M2 — Media
 
-- ADF create/extract/update
-- OFS/FFS
+- [x] ADF create/extract/update
+- [x] OFS/FFS
 - HDF/RDB inspection
 - Gotek/FlashFloppy preparation
 
