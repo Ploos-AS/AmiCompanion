@@ -7,9 +7,9 @@ public sealed class AmigaDosHashTests
 {
     [Theory]
     [InlineData("Filename", 53)]
-    [InlineData("file_1a", 0)]
-    [InlineData("file_24", 0)]
-    [InlineData("file_5u", 0)]
+    [InlineData("file_1a", 56)]
+    [InlineData("file_24", 56)]
+    [InlineData("file_5u", 56)]
     public void MatchesKnownAmigaDosBuckets(string name, int expected) =>
         Assert.Equal(expected, AmigaDosHash.GetBucket(name));
     
