@@ -22,8 +22,10 @@ public sealed partial class MainWindow : Window
         });
 
         if (files.Count == 1 && files[0].TryGetLocalPath() is { } path)
+        {
             FilePathBox.Text = path;
-        if (files.Count == 1) await AutoInspectAsync(path);
+            await AutoInspectAsync(path);
+        }
     }
 
     private async Task AutoInspectAsync(string path)
