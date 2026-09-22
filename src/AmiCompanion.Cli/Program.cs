@@ -113,7 +113,7 @@ static int CreateAdf(string[] commandArgs)
     Console.WriteLine($"Created    {path}\nFilesystem {fs}\nLabel      {label}\nSize       {AdfInspector.StandardSize}");
     return 0;
 }
-static void AtomicWrite(string path, byte[] data, bool backup = false)
+internal static void AtomicWrite(string path, byte[] data, bool backup = false)
 {
     var fullPath = Path.GetFullPath(path);
     var directory = Path.GetDirectoryName(fullPath) ?? Directory.GetCurrentDirectory();
