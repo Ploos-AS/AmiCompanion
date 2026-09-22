@@ -27,7 +27,7 @@ public static class AmigaDosFileWriter
             used.Add(item.Entry.HeaderBlock);
         var blocks = new List<int>();
         var blockCount = image.Length / BlockSize;
-        var needed = Math.Max(1, (content.Length + DataBytesPerBlock - 1) / DataBytesPerBlock);
+        var needed = content.Length == 0 ? 0 : (content.Length + (fileSystem == AmigaDosFileSystem.Ffs ? BlockSize : DataBytesPerBlock) - 1) / (fileSystem == AmigaDosFileSystem.Ffs ? BlockSize : DataBytesPerBlock);
         for (var b = 2; b < blockCount && blocks.Count < needed + 1; b++)
             if (!used.Contains(b)) blocks.Add(b);
         if (blocks.Count != needed + 1) throw new IOException("Not enough free AmigaDOS blocks.");
@@ -59,21 +59,38 @@ public static class AmigaDosFileWriter
 
         var header = image.AsSpan(headerBlock * BlockSize, BlockSize);
         WriteU32(header, 0, 2);
-        WriteU32(header, 81, (uint)content.Length);
-        WriteU32(header, 125, dataBlocks.Length == 0 ? 0u : (uint)dataBlocks[0]);
+        WriteU32(header, 1, (uint)headerBlock);
+        WriteU32(header, 2, (uint)dataBlocks.Length);
+        WriteU32(header, 3, 0);
+        WriteU32(header, 4, dataBlocks.Length == 0 ? 0u : (uint)dataBlocks[0]);
+        WriteU32(header, 47, (uint)content.Length);
+        WriteU32(header, 124, 0);
+        WriteU32(header, 125, (uint)volume.RootBlock);
+        WriteU32(header, 126, 0);
         WriteU32(header, 127, unchecked((uint)-3));
+        for (var i = 0; i < dataBlocks.Length; i++)
+            WriteU32(header, 6 + (72 - (i + 1)), (uint)dataBlocks[i]);
         header[432] = (byte)nameBytes.Length; nameBytes.CopyTo(header[433..]);
         FixChecksum(header, 5);
 
         for (var i = 0; i < dataBlocks.Length; i++)
         {
             var block = image.AsSpan(dataBlocks[i] * BlockSize, BlockSize);
-            WriteU32(block, 0, 8);
-            WriteU32(block, 124, i + 1 < dataBlocks.Length ? (uint)dataBlocks[i + 1] : 0);
             var count = Math.Min(DataBytesPerBlock, content.Length - i * DataBytesPerBlock);
-            if (fileSystem == AmigaDosFileSystem.Ofs) WriteU32(block, 1, (uint)count);
-            content.Slice(i * DataBytesPerBlock, count).CopyTo(block[DataOffset..]);
-            FixChecksum(block, 5);
+            if (fileSystem == AmigaDosFileSystem.Ofs)
+            {
+                WriteU32(block, 0, 8);
+                WriteU32(block, 1, (uint)headerBlock);
+                WriteU32(block, 2, (uint)(i + 1));
+                WriteU32(block, 3, (uint)count);
+                WriteU32(block, 4, i + 1 < dataBlocks.Length ? (uint)dataBlocks[i + 1] : 0);
+                content.Slice(i * DataBytesPerBlock, count).CopyTo(block[DataOffset..]);
+                FixChecksum(block, 5);
+            }
+            else
+            {
+                content.Slice(i * DataBytesPerBlock, count).CopyTo(block);
+            }
         }
         FixChecksum(root, 5);
     }
