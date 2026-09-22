@@ -41,6 +41,17 @@ jobs:
         run: dotnet publish src/AmiCompanion.Gui/AmiCompanion.Gui.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output dist/AmiCompanion
       - name: Publish CLI
         run: dotnet publish src/AmiCompanion.Cli/AmiCompanion.Cli.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained true --output dist/AmiCompanion
+      - name: Write release metadata
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          printf 'AmiCompanion %s\nGit tag: %s\nCommit: %s\nRuntime: %s\n' "$VERSION" "$GITHUB_REF_NAME" "$GITHUB_SHA" "${{ matrix.rid }}" > dist/AmiCompanion/RELEASE.txt
+          cd dist/AmiCompanion
+          if command -v sha256sum >/dev/null 2>&1; then
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          else
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > SHA256SUMS
+          fi
       - name: Upload package input
         uses: actions/upload-artifact@v4
         with:
