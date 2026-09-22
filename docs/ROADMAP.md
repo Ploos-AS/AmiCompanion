@@ -14,11 +14,17 @@
 
 ## M1 — Inspect
 
-- ADF geometry/header validation
-- Kickstart ROM inspector
-- Amiga Hunk inspector
-- CRC32/SHA-256
-- CLI commands and GUI views for inspectors
+- [x] ADF geometry/header validation
+- [x] Amiga bootblock inspection and checksum validation
+- [x] Kickstart ROM inspector
+- [x] Amiga Hunk inspector
+- [x] CRC32/SHA-256
+- [x] File type auto-detection
+- [x] `amic inspect <file>` automatic inspection
+- [x] CLI commands for individual inspectors
+- [x] Avalonia GUI inspect workspace
+- [x] GUI automatic inspection on open
+- [x] Windows/Linux/macOS CI qualification
 
 ## M2 — Media
 
