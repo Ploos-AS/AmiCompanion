@@ -59,12 +59,16 @@ jobs:
           chmod +x packaging/macos/package.sh
           packaging/macos/package.sh dist/AmiCompanion dist/macos "${GITHUB_REF_NAME#v}"
           ditto -c -k --sequesterRsrc --keepParent dist/macos/AmiCompanion.app "dist/AmiCompanion-${GITHUB_REF_NAME#v}-${{ matrix.rid }}.zip"
+          chmod +x packaging/macos/create-dmg.sh
+          packaging/macos/create-dmg.sh dist/macos/AmiCompanion.app "dist/AmiCompanion-${GITHUB_REF_NAME#v}-${{ matrix.rid }}.dmg" "AmiCompanion ${GITHUB_REF_NAME#v}"
       - name: Upload macOS app
         if: ${{ startsWith(matrix.rid, 'osx-') }}
         uses: actions/upload-artifact@v4
         with:
           name: AmiCompanion-package-${{ matrix.rid }}
-          path: dist/AmiCompanion-*.zip
+          path: |
+            dist/AmiCompanion-*.zip
+            dist/AmiCompanion-*.dmg
           if-no-files-found: error
       - name: Create native archive
         shell: bash
