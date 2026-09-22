@@ -24,7 +24,7 @@ public sealed class AmigaDosReaderTests
     public void RejectsCorruptRootBlock()
     {
         var image = AmigaDosFormatter.FormatAdf("TEST");
-        image[880 * 512] = 0;
+        image[880 * 512 + 3] = 0;
         Assert.Throws<InvalidDataException>(() => AmigaDosReader.Inspect(image));
     }
 }
