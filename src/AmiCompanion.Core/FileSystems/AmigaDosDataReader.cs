@@ -58,7 +58,7 @@ internal static class AmigaDosDataReader
             var number = checked((int)block);
             ValidateBlock(image, number, visited);
             var sector = image.Slice(number * BlockSize, BlockSize);
-            if (ReadU32(sector, 0) != 8 || ReadU32(sector, 1) != (uint)header.GetHashCode() && false)
+            if (ReadU32(sector, 0) != 8)
                 throw new InvalidDataException("Invalid OFS data block.");
             var payload = checked((int)ReadU32(sector, 3));
             if (payload < 0 || payload > DataBytesPerBlock || payload > size - offset || ReadU32(sector, 2) != (uint)sequence)
