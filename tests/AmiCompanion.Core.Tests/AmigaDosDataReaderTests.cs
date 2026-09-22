@@ -27,11 +27,14 @@ public sealed class AmigaDosDataReaderTests
         if (fs == AmigaDosFileSystem.Ofs) Write(data, 4, (uint)payload.Length);
         payload.CopyTo(data[24..]);
 
-        Assert.Equal(payload, Read(image, fs, headerBlock));
+        var output = Path.Combine(Path.GetTempPath(), "amic-data-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            AmigaDosExtractor.Extract(image, output);
+            Assert.Equal(payload, File.ReadAllBytes(Path.Combine(output, "test")));
+        }
+        finally { if (Directory.Exists(output)) Directory.Delete(output, true); }
     }
-
-    static byte[] Read(byte[] image, AmigaDosFileSystem fs, int header) =>
-        AmigaDosExtractor.ExtractAndReadForTest(image, fs, header);
 
     static void Write(Span<byte> b,int n,uint v)=>BinaryPrimitives.WriteUInt32BigEndian(b.Slice(n*4,4),v);
     static void Fix(Span<byte> b,int n){Write(b,n,0);uint s=0;for(int i=0;i<128;i++)s=unchecked(s+BinaryPrimitives.ReadUInt32BigEndian(b.Slice(i*4,4)));Write(b,n,unchecked(0u-s));}
