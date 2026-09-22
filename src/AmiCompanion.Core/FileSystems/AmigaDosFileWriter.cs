@@ -9,6 +9,64 @@ public static class AmigaDosFileWriter
     private const int DataOffset = 24;
     private const int DataBytesPerBlock = 488;
 
+    public static void CreateDirectory(byte[] image, AmigaDosFileSystem fileSystem, string parentPath, string name)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        var nameBytes = Encoding.Latin1.GetBytes(name);
+        if (nameBytes.Length is 0 or > 30) throw new ArgumentException("AmigaDOS directory name must be 1-30 bytes.", nameof(name));
+
+        var volume = AmigaDosReader.Inspect(image);
+        if (volume.FileSystem != fileSystem) throw new InvalidDataException("Filesystem type does not match the image.");
+        var normalizedParent = parentPath.Trim('/');
+        var parentBlock = volume.RootBlock;
+        if (normalizedParent.Length != 0)
+        {
+            var matches = AmigaDosReader.ListAll(image).Where(x => x.Entry.IsDirectory && string.Equals(x.Path, normalizedParent, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (matches.Length == 0) throw new DirectoryNotFoundException(parentPath);
+            parentBlock = matches[0].Entry.HeaderBlock;
+        }
+
+        var fullPath = normalizedParent.Length == 0 ? name : normalizedParent + "/" + name;
+        if (AmigaDosReader.ListAll(image).Any(x => string.Equals(x.Path, fullPath, StringComparison.OrdinalIgnoreCase)))
+            throw new IOException($"Entry already exists: {fullPath}");
+
+        var bitmap = image.AsSpan(volume.BitmapBlock * BlockSize, BlockSize);
+        var blockCount = image.Length / BlockSize;
+        var directoryBlock = -1;
+        for (var b = 2; b < blockCount; b++)
+            if (IsFree(bitmap, b)) { directoryBlock = b; break; }
+        if (directoryBlock < 0) throw new IOException("Not enough free AmigaDOS blocks.");
+
+        var parentHeader = image.AsSpan(parentBlock * BlockSize, BlockSize);
+        var slot = 6 + AmigaDosHash.GetBucket(name);
+        var existing = checked((int)ReadU32(parentHeader, slot));
+        if (existing == 0) WriteU32(parentHeader, slot, (uint)directoryBlock);
+        else
+        {
+            var current = existing;
+            while (true)
+            {
+                var currentBlock = image.AsSpan(current * BlockSize, BlockSize);
+                var next = checked((int)ReadU32(currentBlock, 124));
+                if (next == 0) { WriteU32(currentBlock, 124, (uint)directoryBlock); FixChecksum(currentBlock, 5); break; }
+                current = next;
+            }
+        }
+
+        var directory = image.AsSpan(directoryBlock * BlockSize, BlockSize);
+        directory.Clear();
+        WriteU32(directory, 0, 2);
+        WriteU32(directory, 1, (uint)directoryBlock);
+        WriteU32(directory, 125, (uint)parentBlock);
+        WriteU32(directory, 127, 2);
+        directory[432] = (byte)nameBytes.Length;
+        nameBytes.CopyTo(directory[433..]);
+        FixChecksum(directory, 5);
+        MarkAllocated(image, volume.BitmapBlock, new[] { directoryBlock });
+        FixChecksum(parentHeader, 5);
+    }
+
     public static void AddFile(byte[] image, AmigaDosFileSystem fileSystem, string name, ReadOnlySpan<byte> content) =>
         AddFile(image, fileSystem, string.Empty, name, content);
 
