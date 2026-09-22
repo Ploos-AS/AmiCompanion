@@ -18,14 +18,17 @@ public sealed class AmigaDosDataReaderTests
         Write(root, 6, headerBlock); Fix(root, 5);
 
         var header = image.AsSpan(headerBlock * 512, 512);
-        Write(header, 0, 2); Write(header, 3, 1); Write(header, 81, 11); Write(header, 125, dataBlock); Write(header, 127, unchecked((uint)-3));
+        Write(header, 0, 2); Write(header, 2, 1); Write(header, 3, 0); Write(header, 4, dataBlock); Write(header, 77, dataBlock); Write(header, 81, 11); Write(header, 125, 880); Write(header, 127, unchecked((uint)-3));
         header[432] = 4; Encoding.Latin1.GetBytes("test").CopyTo(header[433..]); Fix(header, 5);
 
         var data = image.AsSpan(dataBlock * 512, 512);
-        Write(data, 0, 8); Write(data, 124, 0);
         var payload = Encoding.ASCII.GetBytes("hello world");
-        if (fs == AmigaDosFileSystem.Ofs) Write(data, 4, (uint)payload.Length);
-        payload.CopyTo(fs == AmigaDosFileSystem.Ffs ? data : data[24..]);
+        if (fs == AmigaDosFileSystem.Ofs)
+        {
+            Write(data, 0, 8); Write(data, 1, headerBlock); Write(data, 2, 1); Write(data, 3, (uint)payload.Length); Write(data, 4, 0);
+            payload.CopyTo(data[24..]); Fix(data, 5);
+        }
+        else payload.CopyTo(data);
 
         var output = Path.Combine(Path.GetTempPath(), "amic-data-" + Guid.NewGuid().ToString("N"));
         try
