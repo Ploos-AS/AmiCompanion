@@ -1,6 +1,3 @@
-using System.Buffers.Binary;
-using System.Text;
-
 namespace AmiCompanion.Core.FileSystems;
 
 public static class AmigaDosExtractor
@@ -35,7 +32,7 @@ public static class AmigaDosExtractor
                 continue;
 
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.WriteAllBytes(destination, ReadFile(image, entry.HeaderBlock));
+            File.WriteAllBytes(destination, ReadFile(image, volume.FileSystem, entry.HeaderBlock));
         }
     }
 
