@@ -39,32 +39,7 @@ public static class AmigaDosExtractor
         }
     }
 
-    private static byte[] ReadFile(ReadOnlySpan<byte> image, int headerBlock)
-    {
-        var header = image.Slice(headerBlock * BlockSize, BlockSize);
-        var byteSize = checked((int)BinaryPrimitives.ReadUInt32BigEndian(header.Slice(81 * 4, 4)));
-        if (byteSize == 0) return Array.Empty<byte>();
+    private static byte[] ReadFile(ReadOnlySpan<byte> image, AmigaDosFileSystem fileSystem, int headerBlock) =>
+        AmigaDosDataReader.ReadFile(image, fileSystem, headerBlock);
 
-        var data = new List<byte>(byteSize);
-        var block = BinaryPrimitives.ReadUInt32BigEndian(header.Slice(125 * 4, 4));
-        var visited = new HashSet<int>();
-
-        while (block != 0 && data.Count < byteSize)
-        {
-            var number = checked((int)block);
-            if (number <= 0 || number >= image.Length / BlockSize || !visited.Add(number))
-                throw new InvalidDataException("Invalid or cyclic AmigaDOS file data chain.");
-
-            var sector = image.Slice(number * BlockSize, BlockSize);
-            var next = BinaryPrimitives.ReadUInt32BigEndian(sector.Slice(124 * 4, 4));
-            var dataSize = Math.Min(488, byteSize - data.Count);
-            data.AddRange(sector.Slice(24, dataSize).ToArray());
-            block = next;
-        }
-
-        if (data.Count != byteSize)
-            throw new InvalidDataException("AmigaDOS file data chain ended before the declared file size.");
-
-        return data.ToArray();
-    }
 }
