@@ -16,15 +16,21 @@ public sealed class RigidDiskPartitionInspectorTests
 
         var part = image.AsSpan(3 * 512, 512);
         Write(part, 0, 0x50415254); Write(part, 1, 64); Write(part, 4, 0xffffffff);
-        Write(part, 5, 1); Write(part, 10, 128); Write(part, 11, 2); Write(part, 12, 11); Write(part, 20, 2); Write(part, 21, 79);
-        Write(part, 24, 0x001fe00); Write(part, 25, 0x7ffffffe); Write(part, 26, unchecked((uint)-5)); Write(part, 27, 0x444f5301);
-        Write(part, 32, 3); Encoding.ASCII.GetBytes("DH0").CopyTo(part[132..]); Fix(part, 64);
+        Write(part, 5, 1); Write(part, 8, 0x1234);
+        part[36] = 3; Encoding.ASCII.GetBytes("DH0").CopyTo(part[37..]);
+        Write(part, 32, 16); Write(part, 33, 128); Write(part, 35, 2); Write(part, 37, 11);
+        Write(part, 41, 2); Write(part, 42, 79); Write(part, 45, 0x001fe00); Write(part, 46, 0x7ffffffe);
+        Write(part, 47, unchecked((uint)-5)); Write(part, 48, 0x444f5301); Fix(part, 64);
 
         var rdb = RigidDiskBlockInspector.Inspect(image)!;
         var partitions = RigidDiskPartitionInspector.Inspect(image, rdb);
 
         var p = Assert.Single(partitions);
         Assert.Equal("DH0", p.Name);
+        Assert.Equal((uint)0x1234, p.DevFlags);
+        Assert.Equal((uint)128, p.SizeBlock);
+        Assert.Equal((uint)2, p.SizeHeads);
+        Assert.Equal((uint)11, p.SizeSectors);
         Assert.Equal((uint)2, p.LowCyl);
         Assert.Equal((uint)79, p.HighCyl);
         Assert.True(p.ChecksumValid);
