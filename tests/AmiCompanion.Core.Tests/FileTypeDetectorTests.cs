@@ -33,6 +33,28 @@ public sealed class FileTypeDetectorTests
     }
 
     [Fact]
+    public void DetectsRdbHdfBeyondBlockZero()
+    {
+        var data = new byte[32 * 512];
+        var block = data.AsSpan(3 * 512, 512);
+        BinaryPrimitives.WriteUInt32BigEndian(block, 0x5244534B);
+        BinaryPrimitives.WriteUInt32BigEndian(block[4..], 64);
+        BinaryPrimitives.WriteUInt32BigEndian(block[16..], 512);
+        Assert.Equal(FileKind.HdfRdb, FileTypeDetector.Detect(data));
+    }
+
+    [Fact]
+    public void InvalidRdskCandidateStaysUnknown()
+    {
+        var data = new byte[32 * 512];
+        var block = data.AsSpan(512, 512);
+        BinaryPrimitives.WriteUInt32BigEndian(block, 0x5244534B);
+        BinaryPrimitives.WriteUInt32BigEndian(block[4..], 63);
+        BinaryPrimitives.WriteUInt32BigEndian(block[16..], 512);
+        Assert.Equal(FileKind.Unknown, FileTypeDetector.Detect(data));
+    }
+
+    [Fact]
     public void UnknownDataStaysUnknown() =>
         Assert.Equal(FileKind.Unknown, FileTypeDetector.Detect(new byte[32]));
 }
