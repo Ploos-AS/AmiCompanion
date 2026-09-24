@@ -37,6 +37,7 @@ public sealed partial class MainWindow : Window
             ResultText.Text = kind switch
             {
                 FileKind.Adf => "Detected: ADF image\n" + await FormatAdfAsync(path),
+                FileKind.HdfRdb => "Detected: HDF/RDB image\n" + FormatHdf(path, data),
                 FileKind.KickstartRom => "Detected: Kickstart ROM\n" + FormatRom(path, data),
                 FileKind.AmigaHunk => "Detected: Amiga Hunk\n" + FormatHunk(path, data),
                 _ => "Detected: Unknown\nUse Checksums or select an inspector manually."
@@ -53,6 +54,26 @@ public sealed partial class MainWindow : Window
         if (data.Length >= AmigaBootBlockInspector.Size) { var boot=AmigaBootBlockInspector.Inspect(data); text += $"\nBoot checksum: {(boot.IsChecksumValid ? "valid" : "invalid")}\nRoot block: {boot.RootBlock}"; }
         return text;
     }
+    private static string FormatHdf(string path, byte[] data)
+    {
+        var info = RigidDiskImageInspector.Inspect(data);
+        var rdb = info.Rdb;
+        var lines = new List<string>
+        {
+            $"File: {path}",
+            $"Size: {info.ImageSize}",
+            $"RDB offset: {rdb.Offset}",
+            $"Block size: {rdb.BlockSize}",
+            $"Geometry: {rdb.Cylinders} cyl / {rdb.Heads} heads / {rdb.Sectors} sectors",
+            $"RDB checksum: {(rdb.ChecksumValid ? "valid" : "invalid")}"
+        };
+        foreach (var part in info.Partitions)
+            lines.Add($"Partition: {part.Name}  cyl {part.LowCyl}..{part.HighCyl}  {AmigaDosType.Describe(part.DosType)}  pri {part.BootPriority}  checksum {(part.ChecksumValid ? "valid" : "invalid")}");
+        foreach (var fs in info.FileSystems)
+            lines.Add($"Filesystem: {fs.FileSystemName}  version {fs.Header.Version >> 16}.{fs.Header.Version & 0xffff}  segments {fs.Segments.Count}  bytes {fs.PayloadLength}  checksum {(fs.ChecksumValid ? "valid" : "invalid")}");
+        return string.Join(Environment.NewLine, lines);
+    }
+
     private static string FormatRom(string path, byte[] data) { var i=KickstartRomInspector.Inspect(data); return $"File: {path}\nSize: {i.Size}\nVersion: {i.Version}.{i.Revision}\nExec signature: {i.HasExecSignature}\nChecksum: 0x{i.Checksum:X8} ({(i.IsChecksumValid ? "valid" : "invalid")})"; }
     private static string FormatHunk(string path, byte[] data) { var i=HunkInspector.Inspect(data); return i.HasHeader ? $"File: {path}\nHUNK_HEADER: true\nRange: {i.FirstHunk}..{i.LastHunk}\nHunks: {i.HunkSizesLongwords.Count}\nSizes: {string.Join(", ", i.HunkSizesLongwords)} longwords" : $"File: {path}\nHUNK_HEADER: false"; }
 
