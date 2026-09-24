@@ -31,7 +31,8 @@ public static class RigidDiskPartitionInspector
             result.Add(new RigidDiskPartitionInfo(
                 offset, longs, Read(block, 3), Read(block, 4), Read(block, 5),
                 Read(block, 6), Read(block, 10), Read(block, 11), Read(block, 12),
-                Read(block, 20), Read(block, 21), name, sum == 0));
+                Read(block, 20), Read(block, 21), name, sum == 0,
+                Read(block, 24), Read(block, 25), unchecked((int)Read(block, 26)), Read(block, 27)));
 
             next = Read(block, 4);
         }
