@@ -11,7 +11,7 @@
     </StackPanel>
 
     <Grid Grid.Row="1" Margin="0,24,0,0" ColumnDefinitions="*,Auto">
-      <TextBox x:Name="FilePathBox" Watermark="Select an ADF, Kickstart ROM or Amiga Hunk file…" />
+      <TextBox x:Name="FilePathBox" Watermark="Select an ADF, HDF/RDB, Kickstart ROM or Amiga Hunk file…" />
       <Button Grid.Column="1" Margin="10,0,0,0" Padding="18,8" Content="Open…" Click="OpenFile_Click" />
     </Grid>
 
