@@ -15,6 +15,7 @@ try
         "inspect" when args.Length == 2 => PrintAuto(args[1]),
         "checksum" when args.Length == 2 => await PrintChecksum(args[1]),
         "adf" when args.Length == 3 && args[1] == "info" => PrintAdf(args[2]),
+        "hdf" when args.Length == 3 && args[1] == "info" => PrintHdf(args[2]),
         "adf" when args.Length == 3 && args[1] == "list" => ListAdf(args[2]),
         "adf" when args.Length == 4 && args[1] == "extract" => ExtractAdf(args[2], args[3]),
         "adf" when args.Length is 4 or 5 && args[1] == "create" => CreateAdf(args),
@@ -31,7 +32,7 @@ catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or A
 static void PrintHelp()
 {
     Console.WriteLine($"{AppInfo.Name} ({AppInfo.Milestone})\n{AppInfo.Description}\n\nUsage: amic <command> [options]\n");
-    Console.WriteLine("Commands:\n  info                 Show application information\n  version              Show milestone/version information\n  inspect <file>       Auto-detect and inspect a file\n  checksum <file>      Calculate CRC32 and SHA-256\n  adf info <file>      Inspect an ADF image\n  adf list <file>      List the root directory\n  adf extract <file> <output>  Extract an AmigaDOS volume\n  adf create <file> <label> [ofs|ffs]  Create a formatted DD ADF\n  adf put <adf> <source> <path> [--backup]  Add a file to an ADF\n  adf mkdir <adf> <path> [--backup]  Create a directory in an ADF\n  rom info <file>      Inspect a Kickstart ROM\n  hunk info <file>     Inspect an Amiga Hunk executable");
+    Console.WriteLine("Commands:\n  info                 Show application information\n  version              Show milestone/version information\n  inspect <file>       Auto-detect and inspect a file\n  checksum <file>      Calculate CRC32 and SHA-256\n  adf info <file>      Inspect an ADF image\n  hdf info <file>      Inspect an HDF RDB and partitions\n  adf list <file>      List the root directory\n  adf extract <file> <output>  Extract an AmigaDOS volume\n  adf create <file> <label> [ofs|ffs]  Create a formatted DD ADF\n  adf put <adf> <source> <path> [--backup]  Add a file to an ADF\n  adf mkdir <adf> <path> [--backup]  Create a directory in an ADF\n  rom info <file>      Inspect a Kickstart ROM\n  hunk info <file>     Inspect an Amiga Hunk executable");
 }
 static int PrintInfo(){ Console.WriteLine(AppInfo.Description); return 0; }
 static int PrintVersion(){ Console.WriteLine($"{AppInfo.Name} {AppInfo.Milestone}"); return 0; }
@@ -111,6 +112,15 @@ static int CreateAdf(string[] commandArgs)
     if (File.Exists(path)) throw new IOException($"Refusing to overwrite existing file: {path}");
     File.WriteAllBytes(path, AmigaDosFormatter.FormatAdf(label, fs));
     Console.WriteLine($"Created    {path}\nFilesystem {fs}\nLabel      {label}\nSize       {AdfInspector.StandardSize}");
+    return 0;
+}
+static int PrintHdf(string path)
+{
+    var data = File.ReadAllBytes(path);
+    var rdb = RigidDiskBlockInspector.Inspect(data) ?? throw new InvalidDataException("No valid RDB header found.");
+    Console.WriteLine($"File       {path}\nSize       {data.Length}\nRDB offset {rdb.Offset}\nBlock size {rdb.BlockSize}\nGeometry   {rdb.Cylinders} cyl / {rdb.Heads} heads / {rdb.Sectors} sectors\nChecksum   {(rdb.ChecksumValid ? "valid" : "invalid")}");
+    foreach (var part in RigidDiskPartitionInspector.Inspect(data, rdb))
+        Console.WriteLine($"Partition  {part.Name}  cyl {part.LowCyl}..{part.HighCyl}  checksum {(part.ChecksumValid ? "valid" : "invalid")}");
     return 0;
 }
 static int PrintAdf(string path)
