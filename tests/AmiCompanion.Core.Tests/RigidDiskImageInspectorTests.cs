@@ -17,7 +17,7 @@ public sealed class RigidDiskImageInspectorTests
         var part = image.AsSpan(2 * 512, 512);
         Write(part, 0, 0x50415254); Write(part, 1, 64); Write(part, 4, 0xffffffff);
         // Match the PART layout currently qualified by the dedicated inspector tests.
-        part[132] = 3; "DH0"u8.CopyTo(part[133..]); Fix(part, 64);
+        Write(part, 32, 3); "DH0"u8.CopyTo(part[132..]); Fix(part, 64);
 
         var fshd = image.AsSpan(3 * 512, 512);
         Write(fshd, 0, 0x46534844); Write(fshd, 1, 64); Write(fshd, 4, 0xffffffff);
