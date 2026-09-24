@@ -24,15 +24,17 @@ public static class RigidDiskPartitionInspector
             uint sum = 0;
             for (var i = 0; i < longs; i++) sum = unchecked(sum + Read(block, i));
 
-            var nameLength = Math.Min(Read(block, 32), 31u);
-            var nameBytes = block.Slice(33 * 4, (int)nameLength);
-            var name = Encoding.ASCII.GetString(nameBytes);
+            const int driveNameOffset = 9 * 4;
+            var nameLength = Math.Min(block[driveNameOffset], (byte)31);
+            var name = Encoding.ASCII.GetString(block.Slice(driveNameOffset + 1, nameLength));
 
+            const int environment = 32;
             result.Add(new RigidDiskPartitionInfo(
                 offset, longs, Read(block, 3), Read(block, 4), Read(block, 5),
-                Read(block, 6), Read(block, 10), Read(block, 11), Read(block, 12),
-                Read(block, 20), Read(block, 21), name, sum == 0,
-                Read(block, 24), Read(block, 25), unchecked((int)Read(block, 26)), Read(block, 27)));
+                Read(block, 8), Read(block, environment + 1), Read(block, environment + 3), Read(block, environment + 5),
+                Read(block, environment + 9), Read(block, environment + 10), name, sum == 0,
+                Read(block, environment + 13), Read(block, environment + 14),
+                unchecked((int)Read(block, environment + 15)), Read(block, environment + 16)));
 
             next = Read(block, 4);
         }
