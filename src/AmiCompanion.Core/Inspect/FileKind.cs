@@ -4,6 +4,7 @@ public enum FileKind
 {
     Unknown,
     Adf,
+    HdfRdb,
     KickstartRom,
     AmigaHunk
 }
