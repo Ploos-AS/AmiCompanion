@@ -117,14 +117,15 @@ static int CreateAdf(string[] commandArgs)
 static int PrintHdf(string path)
 {
     var data = File.ReadAllBytes(path);
-    var rdb = RigidDiskBlockInspector.Inspect(data) ?? throw new InvalidDataException("No valid RDB header found.");
-    Console.WriteLine($"File       {path}\nSize       {data.Length}\nRDB offset {rdb.Offset}\nBlock size {rdb.BlockSize}\nGeometry   {rdb.Cylinders} cyl / {rdb.Heads} heads / {rdb.Sectors} sectors\nChecksum   {(rdb.ChecksumValid ? "valid" : "invalid")}");
-    foreach (var part in RigidDiskPartitionInspector.Inspect(data, rdb))
+    var info = RigidDiskImageInspector.Inspect(data);
+    var rdb = info.Rdb;
+    Console.WriteLine($"File       {path}\nSize       {info.ImageSize}\nRDB offset {rdb.Offset}\nBlock size {rdb.BlockSize}\nGeometry   {rdb.Cylinders} cyl / {rdb.Heads} heads / {rdb.Sectors} sectors\nChecksum   {(rdb.ChecksumValid ? "valid" : "invalid")}");
+    foreach (var part in info.Partitions)
         Console.WriteLine($"Partition  {part.Name}  cyl {part.LowCyl}..{part.HighCyl}  {FormatDosType(part.DosType)} ({AmigaDosType.Describe(part.DosType)})  pri {part.BootPriority}  max 0x{part.MaxTransfer:X8}  mask 0x{part.Mask:X8}  checksum {(part.ChecksumValid ? "valid" : "invalid")}");
-    foreach (var fs in RigidDiskFileSystemHeaderInspector.Inspect(data, rdb))
+    foreach (var fs in info.FileSystems)
     {
-        var segments = RigidDiskLoadSegmentInspector.Inspect(data, rdb, fs.SegListBlocks);
-        Console.WriteLine($"Filesystem {FormatDosType(fs.DosType)} ({AmigaDosType.Describe(fs.DosType)})  version {fs.Version >> 16}.{fs.Version & 0xffff}  segments {segments.Count}  bytes {segments.Sum(x => x.PayloadLength)}  checksum {(fs.ChecksumValid && segments.All(x => x.ChecksumValid) ? "valid" : "invalid")}");
+        var header = fs.Header;
+        Console.WriteLine($"Filesystem {FormatDosType(header.DosType)} ({fs.FileSystemName})  version {header.Version >> 16}.{header.Version & 0xffff}  segments {fs.Segments.Count}  bytes {fs.PayloadLength}  checksum {(fs.ChecksumValid ? "valid" : "invalid")}");
     }
     return 0;
 }
