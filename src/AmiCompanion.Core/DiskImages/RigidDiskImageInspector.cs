@@ -1,0 +1,19 @@
+namespace AmiCompanion.Core.DiskImages;
+
+public static class RigidDiskImageInspector
+{
+    public static RigidDiskImageInfo Inspect(ReadOnlySpan<byte> image)
+    {
+        var rdb = RigidDiskBlockInspector.Inspect(image)
+            ?? throw new InvalidDataException("No valid RDB header found.");
+        var partitions = RigidDiskPartitionInspector.Inspect(image, rdb);
+        var headers = RigidDiskFileSystemHeaderInspector.Inspect(image, rdb);
+        var fileSystems = headers
+            .Select(header => new RigidDiskFileSystemInfo(
+                header,
+                RigidDiskLoadSegmentInspector.Inspect(image, rdb, header.SegListBlocks)))
+            .ToArray();
+
+        return new RigidDiskImageInfo(image.Length, rdb, partitions, fileSystems);
+    }
+}
