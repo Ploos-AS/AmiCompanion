@@ -8,11 +8,12 @@ public static class RigidDiskImageInspector
             ?? throw new InvalidDataException("No valid RDB header found.");
         var partitions = RigidDiskPartitionInspector.Inspect(image, rdb);
         var headers = RigidDiskFileSystemHeaderInspector.Inspect(image, rdb);
-        var fileSystems = headers
-            .Select(header => new RigidDiskFileSystemInfo(
-                header,
-                RigidDiskLoadSegmentInspector.Inspect(image, rdb, header.SegListBlocks)))
-            .ToArray();
+        var fileSystems = new List<RigidDiskFileSystemInfo>(headers.Count);
+        foreach (var header in headers)
+        {
+            var segments = RigidDiskLoadSegmentInspector.Inspect(image, rdb, header.SegListBlocks);
+            fileSystems.Add(new RigidDiskFileSystemInfo(header, segments));
+        }
 
         return new RigidDiskImageInfo(image.Length, rdb, partitions, fileSystems);
     }
