@@ -120,7 +120,7 @@ static int PrintHdf(string path)
     var rdb = RigidDiskBlockInspector.Inspect(data) ?? throw new InvalidDataException("No valid RDB header found.");
     Console.WriteLine($"File       {path}\nSize       {data.Length}\nRDB offset {rdb.Offset}\nBlock size {rdb.BlockSize}\nGeometry   {rdb.Cylinders} cyl / {rdb.Heads} heads / {rdb.Sectors} sectors\nChecksum   {(rdb.ChecksumValid ? "valid" : "invalid")}");
     foreach (var part in RigidDiskPartitionInspector.Inspect(data, rdb))
-        Console.WriteLine($"Partition  {part.Name}  cyl {part.LowCyl}..{part.HighCyl}  checksum {(part.ChecksumValid ? "valid" : "invalid")}");
+        Console.WriteLine($"Partition  {part.Name}  cyl {part.LowCyl}..{part.HighCyl}  {FormatDosType(part.DosType)}  pri {part.BootPriority}  max 0x{part.MaxTransfer:X8}  mask 0x{part.Mask:X8}  checksum {(part.ChecksumValid ? "valid" : "invalid")}");
     return 0;
 }
 static int PrintAdf(string path)
