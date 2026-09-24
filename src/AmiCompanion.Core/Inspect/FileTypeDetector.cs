@@ -16,6 +16,9 @@ public static class FileTypeDetector
             data[0] == (byte)'D' && data[1] == (byte)'O' && data[2] == (byte)'S' && data[3] <= 7)
             return FileKind.Adf;
 
+        if (RigidDiskBlockInspector.Inspect(data) is not null)
+            return FileKind.HdfRdb;
+
         if (data.Length >= 16 && data.Length % 4 == 0 &&
             BinaryPrimitives.ReadUInt32BigEndian(data[..4]) == KickstartSignature)
             return FileKind.KickstartRom;
