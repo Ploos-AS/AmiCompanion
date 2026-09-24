@@ -41,7 +41,7 @@ static int PrintAuto(string path)
     var data=File.ReadAllBytes(path);
     var kind=FileTypeDetector.Detect(data);
     Console.WriteLine($"Detected   {kind}");
-    return kind switch { FileKind.Adf=>PrintAdf(path), FileKind.KickstartRom=>PrintRom(path), FileKind.AmigaHunk=>PrintHunk(path), _=>0 };
+    return kind switch { FileKind.Adf=>PrintAdf(path), FileKind.HdfRdb=>PrintHdf(path), FileKind.KickstartRom=>PrintRom(path), FileKind.AmigaHunk=>PrintHunk(path), _=>0 };
 }
 static async Task<int> PrintChecksum(string path)
 {
