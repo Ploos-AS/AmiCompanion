@@ -123,6 +123,17 @@ static int PrintHdf(string path)
         Console.WriteLine($"Partition  {part.Name}  cyl {part.LowCyl}..{part.HighCyl}  {FormatDosType(part.DosType)}  pri {part.BootPriority}  max 0x{part.MaxTransfer:X8}  mask 0x{part.Mask:X8}  checksum {(part.ChecksumValid ? "valid" : "invalid")}");
     return 0;
 }
+static string FormatDosType(uint value)
+{
+    var a = (byte)(value >> 24);
+    var b = (byte)(value >> 16);
+    var c = (byte)(value >> 8);
+    var d = (byte)value;
+    return $"{Printable(a)}{Printable(b)}{Printable(c)}" +
+        (d >= 32 && d <= 126 ? ((char)d).ToString() : $"\\x{d:X2}");
+
+    static char Printable(byte value) => value >= 32 && value <= 126 ? (char)value : '.';
+}
 static int PrintAdf(string path)
 {
     var data=File.ReadAllBytes(path); var i=AdfInspector.Inspect(data);
