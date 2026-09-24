@@ -17,7 +17,7 @@ public sealed class RigidDiskPartitionInspectorTests
         var part = image.AsSpan(3 * 512, 512);
         Write(part, 0, 0x50415254); Write(part, 1, 64); Write(part, 4, 0xffffffff);
         Write(part, 10, 128); Write(part, 11, 2); Write(part, 12, 11); Write(part, 20, 2); Write(part, 21, 79);
-        Write(part, 32, 4); Encoding.ASCII.GetBytes("DH0").CopyTo(part[132..]); Fix(part, 64);
+        Write(part, 32, 3); Encoding.ASCII.GetBytes("DH0").CopyTo(part[132..]); Fix(part, 64);
 
         var rdb = RigidDiskBlockInspector.Inspect(image)!;
         var partitions = RigidDiskPartitionInspector.Inspect(image, rdb);
