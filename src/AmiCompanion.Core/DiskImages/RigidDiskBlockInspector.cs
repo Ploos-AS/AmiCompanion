@@ -18,7 +18,7 @@ public static class RigidDiskBlockInspector
 
             var summedLongs = Read(data, 1);
             if (summedLongs < MinimumLongs || summedLongs > 128 || summedLongs * 4 > data.Length)
-                return null;
+                continue;
 
             uint sum = 0;
             for (var i = 0; i < summedLongs; i++)
@@ -26,7 +26,7 @@ public static class RigidDiskBlockInspector
 
             var blockSize = Read(data, 4);
             if (blockSize < 512 || blockSize > 65536 || (blockSize & 3) != 0)
-                return null;
+                continue;
 
             return new RigidDiskBlockInfo(
                 offset, summedLongs, Read(data, 3), blockSize, Read(data, 5),
