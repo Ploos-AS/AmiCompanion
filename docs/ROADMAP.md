@@ -30,7 +30,7 @@
 
 - [x] ADF create/extract/update
 - [x] OFS/FFS
-- HDF/RDB inspection
+- [x] HDF/RDB inspection
 - Gotek/FlashFloppy preparation
 
 ## M3 — Physical hardware
