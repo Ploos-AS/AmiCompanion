@@ -65,6 +65,23 @@ public sealed class RigidDiskBlockInspectorTests
     }
 
     [Fact]
+    public void SkipsMalformedCandidateAndFindsLaterRdb()
+    {
+        var image = new byte[16 * 512];
+        var malformed = image.AsSpan(0, 512);
+        Write(malformed, 0, 0x5244534B);
+        Write(malformed, 1, 63);
+
+        var valid = image.AsSpan(2 * 512, 512);
+        Write(valid, 0, 0x5244534B);
+        Write(valid, 1, 64);
+        Write(valid, 4, 512);
+        FixChecksum(valid, 64);
+
+        Assert.Equal(2 * 512, RigidDiskBlockInspector.Inspect(image)!.Offset);
+    }
+
+    [Fact]
     public void FindsRdbWithinInitialScanArea()
     {
         var image = new byte[16 * 512];
